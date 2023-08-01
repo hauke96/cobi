@@ -78,3 +78,37 @@ func Test_findMinUncoveredPixel_completelyCoveredRows(t *testing.T) {
 	util.AssertEqual(t, 4, x)
 	util.AssertEqual(t, 2, y)
 }
+
+func Test_findLargestNonEncodedArea(t *testing.T) {
+	// 11112223
+	// 11112223
+	// 1111...3
+	// 1111....
+	// ........
+	// ........
+	// ........
+	// ........
+	areas := []EncodedArea{
+		{X: 0, Y: 0, W: 4, H: 5}, // 1
+		{X: 4, Y: 0, W: 3, H: 2}, // 3
+		{X: 7, Y: 0, W: 1, H: 3}, // 2
+	}
+	values := util.TransposeArray([][]uint8{
+		{0, 1, 2, 3, 4, 5, 6, 7},
+		{0, 1, 2, 3, 4, 5, 6, 7},
+		{0, 1, 2, 3, 4, 5, 6, 7},
+		{0, 1, 2, 3, 4, 5, 6, 7},
+		{0, 1, 2, 3, 4, 5, 6, 7},
+		{0, 1, 2, 3, 4, 5, 6, 7},
+		{0, 1, 2, 3, 4, 5, 6, 7},
+		{0, 1, 2, 3, 4, 5, 6, 7},
+	})
+
+	newArea := *(findLargestNonEncodedArea(values, areas))
+
+	util.AssertEqual(t, 4, newArea.X)
+	util.AssertEqual(t, 2, newArea.Y)
+	util.AssertEqual(t, 3, newArea.W)
+	util.AssertEqual(t, 3, newArea.H)
+	util.AssertEqual(t, [4]uint8{4, 6, 4, 6}, newArea.Values)
+}
