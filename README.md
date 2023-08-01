@@ -1,0 +1,2 @@
+# cobi
+Compression by interpolation.
