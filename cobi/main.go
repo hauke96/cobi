@@ -1,6 +1,8 @@
 package main
 
 import (
+	"cobi/image"
+	"cobi/png"
 	"github.com/alecthomas/kong"
 	"github.com/hauke96/sigolo"
 	"path/filepath"
@@ -33,13 +35,46 @@ func main() {
 		mode = ModeDecompress
 	}
 
+	// Determine file name and extention
+	inputFileExt := filepath.Ext(cli.Input)
+	inputFileName := strings.TrimSuffix(cli.Input, inputFileExt)
+
 	// Determine output filename and set it in the "cli" instance
 	if cli.Output == "" {
-		inputFilename := strings.TrimSuffix(cli.Input, filepath.Ext(cli.Input))
-		outputFilename := inputFilename + ".cobi" // compression is default
+		outputFilename := inputFileName + ".cobi" // compression is default
 		if mode == ModeDecompress {
-			outputFilename = inputFilename + ".png"
+			outputFilename = inputFileName + ".png"
 		}
 		cli.Output = outputFilename
 	}
+
+	switch mode {
+	case ModeCompress:
+		var reader image.Reader
+		switch inputFileExt {
+		case ".png":
+			reader = &png.Reader{}
+		default:
+			sigolo.Fatal("Unsupported file extension %s for compression", inputFileExt)
+		}
+		_, err := compress(cli.Input, reader)
+		sigolo.FatalCheck(err)
+	case ModeDecompress:
+		sigolo.Fatal("Decompression is not implemented yet")
+	default:
+		sigolo.Fatal("Invalid compression mode %d", mode)
+	}
+}
+
+func compress(filePath string, reader image.Reader) ([]byte, error) {
+	img, err := reader.Read(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	if sigolo.LogLevel == sigolo.LOG_DEBUG {
+		img.Print()
+	}
+
+	return make([]byte, 0), nil
 }
