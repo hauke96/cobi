@@ -1,4 +1,4 @@
-package main
+package encoding
 
 import (
 	"cobi/image"
@@ -11,8 +11,8 @@ type EncodedArea struct {
 }
 
 func (e *EncodedArea) Contains(x, y int) bool {
-	return e.X <= x && x <= e.X+e.W &&
-		e.Y <= y && y <= e.Y+e.H
+	return e.X <= x && x <= e.X+e.W-1 &&
+		e.Y <= y && y <= e.Y+e.H-1
 }
 
 // Encode determines the encoded areas per color channel R (0), G (1), B (2) and A (3).
@@ -78,10 +78,9 @@ func findLargestNonEncodedArea(values [][]byte, areas []EncodedArea) *EncodedAre
 // areas grow from the upper-left to the bottom-right. This means for example, when (3, 5) is the first non-covered
 // pixel, all pixels in rows 0, 1 or 2 are covered and all pixels of row 3 in columns 0-4 are covered.
 func findMinUncoveredPixel(areas []EncodedArea, width, height int) (int, int) {
-	x := 0
-	y := 0
-	for ; y < height; y++ {
-		for ; x < width; x++ {
+	var x, y int
+	for y = 0; y < height; y++ {
+		for x = 0; x < width; x++ {
 			// Assume this pixel (x, y) is not covered and return (x, y) if it indeed isn't covered.
 			isCovered := false
 			for _, area := range areas {

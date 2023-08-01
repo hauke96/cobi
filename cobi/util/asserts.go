@@ -49,6 +49,13 @@ func AssertFalse(t *testing.T, b bool) {
 	}
 }
 
+func AssertEqual[T comparable](t *testing.T, expected T, actual T) {
+	if expected != actual {
+		sigolo.Errorb(1, "Expected %v but found %v", expected, actual)
+		t.Fail()
+	}
+}
+
 func AssertArrayEqual[T comparable](t *testing.T, expected [][]T, actual [][]T) {
 	if len(expected) != len(actual) {
 		sigolo.Errorb(1, "Arrays must have the same size in the first dimension, but %d != %d", len(expected), len(actual))
