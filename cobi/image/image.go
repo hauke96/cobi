@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"image"
+	"image/color"
 )
 
 type Image struct {
@@ -21,6 +22,23 @@ func (img *Image) Print() {
 			fmt.Printf("[%3d %3d %3d], ", img.R[x][y], img.G[x][y], img.B[x][y])
 		}
 		fmt.Print("\n")
+	}
+}
+
+func (img *Image) ColorModel() color.Model {
+	return color.AlphaModel
+}
+
+func (img *Image) Bounds() image.Rectangle {
+	return image.Rect(0, 0, img.Width, img.Height)
+}
+
+func (img *Image) At(x, y int) color.Color {
+	return color.RGBA{
+		R: img.R[x][y],
+		G: img.G[x][y],
+		B: img.B[x][y],
+		A: img.A[x][y],
 	}
 }
 

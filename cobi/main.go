@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cobi/decoding"
 	"cobi/encoding"
 	"cobi/image"
 	"cobi/png"
@@ -67,7 +68,15 @@ func main() {
 		sigolo.FatalCheck(err)
 
 		// Write the result
-		err = os.WriteFile(cli.Output, data, 0644)
+		decodedImage, err := decoding.Decode(*data)
+		sigolo.FatalCheck(err)
+		pngWriter := png.Writer{}
+		err = pngWriter.Write(inputFileName+"_decoded.png", *decodedImage)
+		sigolo.FatalCheck(err)
+
+		bytes, err := json.Marshal(*data)
+		sigolo.FatalCheck(err)
+		err = os.WriteFile(cli.Output, bytes, 0644)
 		sigolo.FatalCheck(err)
 	case ModeDecompress:
 		sigolo.Fatal("Decompression is not implemented yet")
@@ -76,7 +85,7 @@ func main() {
 	}
 }
 
-func compress(filePath string, reader image.Reader) ([]byte, error) {
+func compress(filePath string, reader image.Reader) (*[4][]encoding.EncodedArea, error) {
 	img, err := reader.Read(filePath)
 	if err != nil {
 		return nil, err
@@ -91,5 +100,5 @@ func compress(filePath string, reader image.Reader) ([]byte, error) {
 		return nil, err
 	}
 
-	return json.Marshal(encodedAreas)
+	return &encodedAreas, nil
 }
