@@ -38,7 +38,7 @@ func Test_encodedArea_contains(t *testing.T) {
 }
 
 func Test_findMinUncoveredPixel_noAreas(t *testing.T) {
-	x, y := findMinUncoveredPixel([]EncodedArea{}, 10, 10)
+	x, y := FindMinUncoveredPixel([]EncodedArea{}, 10, 10)
 	util.AssertEqual(t, 0, x)
 	util.AssertEqual(t, 0, y)
 }
@@ -55,7 +55,7 @@ func Test_findMinUncoveredPixel_oneArea(t *testing.T) {
 	areas := []EncodedArea{
 		{X: 0, Y: 0, W: 3, H: 5}, // 1
 	}
-	x, y := findMinUncoveredPixel(areas, 8, 8)
+	x, y := FindMinUncoveredPixel(areas, 8, 8)
 	util.AssertEqual(t, 3, x)
 	util.AssertEqual(t, 0, y)
 }
@@ -74,7 +74,7 @@ func Test_findMinUncoveredPixel_completelyCoveredRows(t *testing.T) {
 		{X: 4, Y: 0, W: 3, H: 2}, // 3
 		{X: 7, Y: 0, W: 1, H: 3}, // 2
 	}
-	x, y := findMinUncoveredPixel(areas, 8, 8)
+	x, y := FindMinUncoveredPixel(areas, 8, 8)
 	util.AssertEqual(t, 4, x)
 	util.AssertEqual(t, 2, y)
 }

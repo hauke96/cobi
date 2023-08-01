@@ -2,6 +2,7 @@ package encoding
 
 import (
 	"cobi/image"
+	"cobi/interpolate"
 )
 
 // EncodedArea represents
@@ -13,6 +14,10 @@ type EncodedArea struct {
 func (e *EncodedArea) Contains(x, y int) bool {
 	return e.X <= x && x <= e.X+e.W-1 &&
 		e.Y <= y && y <= e.Y+e.H-1
+}
+
+func (e *EncodedArea) GetInterpolatedArea() [][]byte {
+	return interpolate.Interpolate(e.W, e.H, e.Values)
 }
 
 // Encode determines the encoded areas per color channel R (0), G (1), B (2) and A (3).
@@ -45,7 +50,7 @@ func findLargestNonEncodedArea(values [][]byte, areas []EncodedArea) *EncodedAre
 	width := len(values)
 	height := len(values[0])
 
-	minX, minY := findMinUncoveredPixel(areas, width, height)
+	minX, minY := FindMinUncoveredPixel(areas, width, height)
 	if minX == -1 || minY == -1 {
 		return nil
 	}
@@ -74,10 +79,10 @@ func findLargestNonEncodedArea(values [][]byte, areas []EncodedArea) *EncodedAre
 	}
 }
 
-// findMinUncoveredPixel determines the smallest pixel that is not covered by any area. It is assumed that the encoded
+// FindMinUncoveredPixel determines the smallest pixel that is not covered by any area. It is assumed that the encoded
 // areas grow from the upper-left to the bottom-right. This means for example, when (3, 5) is the first non-covered
 // pixel, all pixels in rows 0, 1 or 2 are covered and all pixels of row 3 in columns 0-4 are covered.
-func findMinUncoveredPixel(areas []EncodedArea, width, height int) (int, int) {
+func FindMinUncoveredPixel(areas []EncodedArea, width, height int) (int, int) {
 	var x, y int
 	for y = 0; y < height; y++ {
 		for x = 0; x < width; x++ {
