@@ -26,7 +26,7 @@ func (img *Image) Print() {
 }
 
 func (img *Image) ColorModel() color.Model {
-	return color.AlphaModel
+	return color.RGBAModel
 }
 
 func (img *Image) Bounds() image.Rectangle {
