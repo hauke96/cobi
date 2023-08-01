@@ -7,30 +7,40 @@ import (
 )
 
 type Image struct {
-	R [][]byte
-	G [][]byte
-	B [][]byte
-	A [][]byte
+	R      [][]byte
+	G      [][]byte
+	B      [][]byte
+	A      [][]byte
+	Width  int
+	Height int
 }
 
 func (img *Image) Print() {
-	for y := 0; y < len(img.R[0]); y++ {
-		for x := 0; x < len(img.R); x++ {
+	for y := 0; y < img.Height; y++ {
+		for x := 0; x < img.Width; x++ {
 			fmt.Printf("[%3d %3d %3d], ", img.R[x][y], img.G[x][y], img.B[x][y])
 		}
 		fmt.Print("\n")
 	}
 }
 
+// New create an Image instance in which the RGBA arrays are initialized but empty. The first dimension of the array
+// represents the horizontal x-direction in the image. The second array dimension the vertical y-direction.
+func New(width, height int) *Image {
+	return &Image{
+		R:      make([][]byte, width),
+		G:      make([][]byte, width),
+		B:      make([][]byte, width),
+		A:      make([][]byte, width),
+		Width:  width,
+		Height: height,
+	}
+}
+
 func FromGoImage(goImg image.Image) (*Image, error) {
 	w, h := goImg.Bounds().Max.X, goImg.Bounds().Max.Y
 
-	img := Image{
-		R: make([][]byte, w),
-		G: make([][]byte, w),
-		B: make([][]byte, w),
-		A: make([][]byte, w),
-	}
+	img := New(w, h)
 
 	// convert data from uint32 into bytes for smaller images
 	for x := 0; x < w; x++ {
@@ -57,5 +67,5 @@ func FromGoImage(goImg image.Image) (*Image, error) {
 		}
 	}
 
-	return &img, nil
+	return img, nil
 }
