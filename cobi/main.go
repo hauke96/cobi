@@ -91,9 +91,9 @@ func compress(filePath string, reader image.Reader) (*[4][]encoding.EncodedArea,
 		return nil, err
 	}
 
-	if sigolo.LogLevel == sigolo.LOG_DEBUG {
-		img.Print()
-	}
+	//if sigolo.LogLevel == sigolo.LOG_DEBUG {
+	//	img.Print()
+	//}
 
 	encodedAreas, err := encoding.Encode(*img)
 	if err != nil {

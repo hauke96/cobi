@@ -3,6 +3,7 @@ package encoding
 import (
 	"cobi/image"
 	"cobi/interpolate"
+	"github.com/hauke96/sigolo"
 )
 
 // EncodedArea represents
@@ -20,21 +21,56 @@ func (e *EncodedArea) GetInterpolatedArea() [][]uint8 {
 	return interpolate.Interpolate(e.W, e.H, e.Values)
 }
 
+type ChannelEncoder struct {
+	coveredPixel       [][]bool
+	minUncoveredPixelX int
+	minUncoveredPixelY int
+	imageWidth         int
+	imageHeight        int
+}
+
+func newChannelEncoder(width, height int) *ChannelEncoder {
+	coveredPixel := make([][]bool, width)
+	for x := 0; x < width; x++ {
+		coveredPixel[x] = make([]bool, height)
+	}
+
+	return &ChannelEncoder{
+		minUncoveredPixelX: 0,
+		minUncoveredPixelY: 0,
+		imageWidth:         width,
+		imageHeight:        height,
+		coveredPixel:       coveredPixel,
+	}
+}
+
 // Encode determines the encoded areas per color channel R (0), G (1), B (2) and A (3).
 func Encode(img image.Image) ([4][]EncodedArea, error) {
+	sigolo.Debug("Encode channel R")
+	channelR := newChannelEncoder(img.Width, img.Height).encodeChannel(img.R)
+
+	sigolo.Debug("Encode channel G")
+	channelG := newChannelEncoder(img.Width, img.Height).encodeChannel(img.G)
+
+	sigolo.Debug("Encode channel B")
+	channelB := newChannelEncoder(img.Width, img.Height).encodeChannel(img.B)
+	
+	sigolo.Debug("Encode channel A")
+	channelA := newChannelEncoder(img.Width, img.Height).encodeChannel(img.A)
+
 	return [4][]EncodedArea{
-		EncodeChannel(img.R),
-		EncodeChannel(img.G),
-		EncodeChannel(img.B),
-		EncodeChannel(img.A),
+		channelR,
+		channelG,
+		channelB,
+		channelA,
 	}, nil
 }
 
-func EncodeChannel(values [][]uint8) []EncodedArea {
+func (e *ChannelEncoder) encodeChannel(values [][]uint8) []EncodedArea {
 	var result []EncodedArea
 
 	for {
-		area := findLargestNonEncodedArea(values, result)
+		area := e.findLargestNonEncodedArea(values, result)
 		if area == nil {
 			break
 		}
@@ -46,58 +82,60 @@ func EncodeChannel(values [][]uint8) []EncodedArea {
 
 // findLargestNonEncodedArea finds the next encoded area following the strategy to find areas from the upper-left to the
 // bottom-right of the image.
-func findLargestNonEncodedArea(values [][]uint8, areas []EncodedArea) *EncodedArea {
-	width := len(values)
-	height := len(values[0])
+func (e *ChannelEncoder) findLargestNonEncodedArea(values [][]uint8, areas []EncodedArea) *EncodedArea {
+	imgWidth := len(values)
+	imgHeight := len(values[0])
 
-	minX, minY := FindMinUncoveredPixel(areas, width, height)
-	if minX == -1 || minY == -1 {
+	//areaX, areaY := e.FindMinUncoveredPixel(imgWidth, imgHeight)
+	areaX, areaY := e.minUncoveredPixelX, e.minUncoveredPixelY
+	if areaX == -1 || areaY == -1 {
 		return nil
 	}
 
 	// TODO use real interpolation methods to find encoded areas
-	w := 3
-	if minX+w >= width {
-		w = width - minX
+	areaWidth := 3
+	if areaX+areaWidth >= imgWidth {
+		areaWidth = imgWidth - areaX
 	}
-	h := 3
-	if minY+h >= height {
-		h = height - minY
+	areaHeight := 3
+	if areaY+areaHeight >= imgHeight {
+		areaHeight = imgHeight - areaY
 	}
 
-	return &EncodedArea{
-		X: minX,
-		Y: minY,
-		W: w,
-		H: h,
+	encodedArea := &EncodedArea{
+		X: areaX,
+		Y: areaY,
+		W: areaWidth,
+		H: areaHeight,
 		Values: [4]uint8{
-			values[minX][minY],
-			values[minX+w-1][minY],
-			values[minX][minY+h-1],
-			values[minX+w-1][minY+h-1],
+			values[areaX][areaY],
+			values[areaX+areaWidth-1][areaY],
+			values[areaX][areaY+areaHeight-1],
+			values[areaX+areaWidth-1][areaY+areaHeight-1],
 		},
 	}
+
+	e.addToCoverageMap(*encodedArea)
+
+	return encodedArea
+}
+
+func (e *ChannelEncoder) addToCoverageMap(encodedArea EncodedArea) {
+	for y := encodedArea.Y; y < encodedArea.Y+encodedArea.H; y++ {
+		for x := encodedArea.X; x < encodedArea.X+encodedArea.W; x++ {
+			e.coveredPixel[x][y] = true
+		}
+	}
+	e.minUncoveredPixelX, e.minUncoveredPixelY = e.FindMinUncoveredPixel()
 }
 
 // FindMinUncoveredPixel determines the smallest pixel that is not covered by any area. It is assumed that the encoded
 // areas grow from the upper-left to the bottom-right. This means for example, when (3, 5) is the first non-covered
 // pixel, all pixels in rows 0, 1 or 2 are covered and all pixels of row 3 in columns 0-4 are covered.
-func FindMinUncoveredPixel(areas []EncodedArea, width, height int) (int, int) {
-	var x, y int
-	for y = 0; y < height; y++ {
-		for x = 0; x < width; x++ {
-			// Assume this pixel (x, y) is not covered and return (x, y) if it indeed isn't covered.
-			isCovered := false
-			for _, area := range areas {
-				isCovered = isCovered || area.Contains(x, y)
-				if isCovered {
-					// Cell is covered -> Abort and process with next cell
-					break
-				}
-			}
-
-			if !isCovered {
-				// Minimum non-covered cell found
+func (e *ChannelEncoder) FindMinUncoveredPixel() (int, int) {
+	for y := e.minUncoveredPixelY; y < e.imageHeight; y++ {
+		for x := 0; x < e.imageWidth; x++ {
+			if !e.coveredPixel[x][y] {
 				return x, y
 			}
 		}
