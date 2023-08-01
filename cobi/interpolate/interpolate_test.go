@@ -23,6 +23,24 @@ func TestInterpolation(t *testing.T) {
 	util.AssertArrayEqual(t, expected, actual)
 }
 
+func TestInterpolation_decreasingValues(t *testing.T) {
+	// 10 . 0
+	//  . . .
+	//  . . .
+	//  5 . 255
+	// TransposeArray needed because the image data is actually stored column-wise, but we create it row-wise here.
+	expected := util.TransposeArray([][]uint8{
+		{10, 5, 0},
+		{8, 46, 85},
+		{6, 88, 170},
+		{5, 130, 255},
+	})
+
+	actual := Interpolate(3, 4, [4]uint8{10, 0, 5, 255})
+
+	util.AssertArrayEqual(t, expected, actual)
+}
+
 func TestInterpolation_noInterpolationNeeded(t *testing.T) {
 	// 0 8
 	// 5 10

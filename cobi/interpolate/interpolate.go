@@ -31,20 +31,20 @@ func Interpolate(w, h int, v [4]uint8) [][]uint8 {
 
 func interpolateRow(v [][]uint8, y int) {
 	w := len(v)
-	minXValue := v[0][y]
-	maxXValue := v[w-1][y]
-	increasePerColumn := float32(maxXValue-minXValue) / float32(w-1)
+	leftXValue := float32(v[0][y])
+	rightXValue := float32(v[w-1][y])
+	increasePerColumn := (rightXValue - leftXValue) / float32(w-1)
 	for x := 1; x < w-1; x++ {
-		v[x][y] = uint8(float32(minXValue) + float32(x)*increasePerColumn)
+		v[x][y] = uint8(leftXValue + float32(x)*increasePerColumn)
 	}
 }
 
 func interpolateColumn(v [][]uint8, x int) {
 	h := len(v[x])
-	minYValue := v[x][0]
-	maxYValue := v[x][h-1]
-	increasePerRow := float32(maxYValue-minYValue) / float32(h-1)
+	upperYValue := float32(v[x][0])
+	lowerYValue := float32(v[x][h-1])
+	increasePerRow := (lowerYValue - upperYValue) / float32(h-1)
 	for y := 1; y < h-1; y++ {
-		v[x][y] = uint8(float32(minYValue) + float32(y)*increasePerRow)
+		v[x][y] = uint8(upperYValue + float32(y)*increasePerRow)
 	}
 }
