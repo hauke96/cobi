@@ -4,10 +4,8 @@ import (
 	"cobi/encoding"
 	"cobi/image"
 	"cobi/png"
-	"encoding/json"
 	"github.com/alecthomas/kong"
 	"github.com/hauke96/sigolo"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -65,19 +63,19 @@ func main() {
 		// Compress the image
 		encodedAreas, err := compress(cli.Input, reader)
 		sigolo.FatalCheck(err)
-
-		// Write the result
-		decodedImage, err := encoding.Decode(encodedAreas)
-		sigolo.FatalCheck(err)
-		pngWriter := png.Writer{}
-		err = pngWriter.Write(inputFileName+"_decoded.png", *decodedImage)
-		err = pngWriter.Write(inputFileName+"_decoded_debug.png", *encoding.GetDebugImage(decodedImage.Width, decodedImage.Height, encodedAreas))
+		err = encoding.Write(cli.Output, encodedAreas)
 		sigolo.FatalCheck(err)
 
-		bytes, err := json.Marshal(encodedAreas)
-		sigolo.FatalCheck(err)
-		err = os.WriteFile(cli.Output, bytes, 0644)
-		sigolo.FatalCheck(err)
+		if cli.Debug {
+			decodedImage, err := encoding.Decode(encodedAreas)
+			sigolo.FatalCheck(err)
+
+			pngWriter := png.Writer{}
+			err = pngWriter.Write(inputFileName+"_decoded.png", *decodedImage)
+			sigolo.FatalCheck(err)
+			err = pngWriter.Write(inputFileName+"_decoded_debug.png", *encoding.GetDebugImage(decodedImage.Width, decodedImage.Height, encodedAreas))
+			sigolo.FatalCheck(err)
+		}
 	case ModeDecompress:
 		sigolo.Fatal("Decompression is not implemented yet")
 	default:

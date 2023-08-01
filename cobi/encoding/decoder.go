@@ -53,11 +53,14 @@ func getSizeOfChannel(areas []EncodedArea) (int, int, error) {
 	height := 0
 
 	for _, area := range areas {
-		if width < area.X+area.W {
-			width = area.X + area.W
+		areaWidth := int(area.W)
+		areaHeight := int(area.H)
+
+		if width < area.X+areaWidth {
+			width = area.X + areaWidth
 		}
-		if height < area.Y+area.H {
-			height = area.Y + area.H
+		if height < area.Y+areaHeight {
+			height = area.Y + areaHeight
 		}
 	}
 
@@ -79,8 +82,8 @@ func interpolateChannel(areas []EncodedArea, width, height int) [][]uint8 {
 	for _, area := range areas {
 		interpolatedValues := area.GetInterpolatedArea()
 
-		for x := 0; x < area.W; x++ {
-			for y := 0; y < area.H; y++ {
+		for x := 0; x < int(area.W); x++ {
+			for y := 0; y < int(area.H); y++ {
 				result[x+area.X][y+area.Y] = interpolatedValues[x][y]
 			}
 		}

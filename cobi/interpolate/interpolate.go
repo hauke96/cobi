@@ -5,9 +5,9 @@ package interpolate
 // [1] - upper right
 // [2] - bottom left
 // [3] - bottom right
-func Interpolate(w, h int, v [4]uint8) [][]uint8 {
+func Interpolate(w, h uint8, v [4]uint8) [][]uint8 {
 	result := make([][]uint8, w)
-	for x := 0; x < w; x++ {
+	for x := uint8(0); x < w; x++ {
 		result[x] = make([]uint8, h)
 	}
 
@@ -22,14 +22,14 @@ func Interpolate(w, h int, v [4]uint8) [][]uint8 {
 	interpolateRow(result, h-1)
 
 	// Then interpolate all columns between first and last row
-	for x := 0; x < w; x++ {
+	for x := uint8(0); x < w; x++ {
 		interpolateColumn(result, x)
 	}
 
 	return result
 }
 
-func interpolateRow(v [][]uint8, y int) {
+func interpolateRow(v [][]uint8, y uint8) {
 	w := len(v)
 	leftXValue := float32(v[0][y])
 	rightXValue := float32(v[w-1][y])
@@ -39,7 +39,7 @@ func interpolateRow(v [][]uint8, y int) {
 	}
 }
 
-func interpolateColumn(v [][]uint8, x int) {
+func interpolateColumn(v [][]uint8, x uint8) {
 	h := len(v[x])
 	upperYValue := float32(v[x][0])
 	lowerYValue := float32(v[x][h-1])

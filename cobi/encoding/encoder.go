@@ -9,13 +9,14 @@ import (
 
 // EncodedArea represents
 type EncodedArea struct {
-	X, Y, W, H int
-	Values     [4]uint8
+	X, Y   int
+	W, H   uint8
+	Values [4]uint8
 }
 
 func (e *EncodedArea) Contains(x, y int) bool {
-	return e.X <= x && x <= e.X+e.W-1 &&
-		e.Y <= y && y <= e.Y+e.H-1
+	return e.X <= x && x <= e.X+int(e.W)-1 &&
+		e.Y <= y && y <= e.Y+int(e.H)-1
 }
 
 func (e *EncodedArea) GetInterpolatedArea() [][]uint8 {
@@ -47,9 +48,9 @@ func GetDebugImage(width, height int, areas [4][]EncodedArea) *image.Image {
 
 		for _, area := range areas[i] {
 			channel[area.X][area.Y] = 255
-			channel[area.X+area.W-1][area.Y] = 255
-			channel[area.X][area.Y+area.H-1] = 255
-			channel[area.X+area.W-1][area.Y+area.H-1] = 255
+			channel[area.X+int(area.W)-1][area.Y] = 255
+			channel[area.X][area.Y+int(area.H)-1] = 255
+			channel[area.X+int(area.W)-1][area.Y+int(area.H)-1] = 255
 		}
 	}
 
@@ -140,9 +141,9 @@ func (e *ChannelEncoder) findLargestNonEncodedArea(values [][]uint8, areas []Enc
 		H: areaHeight,
 		Values: [4]uint8{
 			values[areaX][areaY],
-			values[areaX+areaWidth-1][areaY],
-			values[areaX][areaY+areaHeight-1],
-			values[areaX+areaWidth-1][areaY+areaHeight-1],
+			values[areaX+int(areaWidth)-1][areaY],
+			values[areaX][areaY+int(areaHeight)-1],
+			values[areaX+int(areaWidth)-1][areaY+int(areaHeight)-1],
 		},
 	}
 
@@ -152,8 +153,8 @@ func (e *ChannelEncoder) findLargestNonEncodedArea(values [][]uint8, areas []Enc
 }
 
 func (e *ChannelEncoder) addToCoverageMap(encodedArea EncodedArea) {
-	for y := encodedArea.Y; y < encodedArea.Y+encodedArea.H; y++ {
-		for x := encodedArea.X; x < encodedArea.X+encodedArea.W; x++ {
+	for y := encodedArea.Y; y < encodedArea.Y+int(encodedArea.H); y++ {
+		for x := encodedArea.X; x < encodedArea.X+int(encodedArea.W); x++ {
 			e.coveredPixel[x][y] = true
 		}
 	}
@@ -176,16 +177,16 @@ func (e *ChannelEncoder) findMinUncoveredPixel() (int, int) {
 	return -1, -1
 }
 
-func (e *ChannelEncoder) getAreaSize(x, y int) (int, int) {
-	maxWidth := 0
-	for _x := x; _x < e.imageWidth && y+maxWidth < e.imageHeight; _x++ {
+func (e *ChannelEncoder) getAreaSize(x, y int) (uint8, uint8) {
+	maxWidth := uint8(0)
+	for _x := x; _x < e.imageWidth && y+int(maxWidth) < e.imageHeight && maxWidth < math.MaxUint8; _x++ {
 		if e.coveredPixel[_x][y] {
 			break
 		}
 		maxWidth++
 	}
 
-	width := 2
+	width := uint8(2)
 	if maxWidth < width {
 		width = maxWidth
 	}
@@ -193,9 +194,9 @@ func (e *ChannelEncoder) getAreaSize(x, y int) (int, int) {
 	// TODO make this configurable
 	differenceThreshold := 0.0005
 
-	for ; width < maxWidth && y+width < e.imageHeight; width++ {
+	for ; width < maxWidth && y+int(width) < e.imageHeight && width < math.MaxUint8; width++ {
 		// Build a square -> width = height
-		difference := e.calculateDifference(x, y, x+width, y+width)
+		difference := e.calculateDifference(x, y, x+int(width), y+int(width))
 		if difference > differenceThreshold {
 			// We passed the point of tolerable quality -> Previous iteration was the last one with an okay difference.
 			width--
@@ -207,7 +208,7 @@ func (e *ChannelEncoder) getAreaSize(x, y int) (int, int) {
 }
 
 func (e *ChannelEncoder) calculateDifference(x1, y1, x2, y2 int) float64 {
-	interpolatedData := interpolate.Interpolate(x2-x1, y2-y1, [4]uint8{
+	interpolatedData := interpolate.Interpolate(uint8(x2-x1), uint8(y2-y1), [4]uint8{
 		e.channel[x1][y1],
 		e.channel[x2][y1],
 		e.channel[x1][y2],
