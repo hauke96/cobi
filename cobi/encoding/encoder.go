@@ -178,62 +178,82 @@ func (e *ChannelEncoder) findMinUncoveredPixel() (int, int) {
 }
 
 func (e *ChannelEncoder) getAreaSize(x, y int) (uint8, uint8) {
-	maxWidth := uint8(0)
-	for _x := x; _x < e.imageWidth && y+int(maxWidth) < e.imageHeight && maxWidth < math.MaxUint8; _x++ {
-		if e.coveredPixel[_x][y] {
-			break
-		}
-		maxWidth++
-	}
-
-	width := uint8(2)
-	if maxWidth < width {
-		width = maxWidth
-	}
-
 	// TODO make this configurable
-	differenceThreshold := 0.0005
+	qualityThreshold := 0.005
 
-	for ; width < maxWidth && y+int(width) < e.imageHeight && width < math.MaxUint8; width++ {
-		// Build a square -> width = height
-		difference := e.calculateDifference(x, y, x+int(width), y+int(width))
-		if difference > differenceThreshold {
-			// We passed the point of tolerable quality -> Previous iteration was the last one with an okay difference.
-			width--
+	maxWidthInt := 0
+	for ; x+maxWidthInt < e.imageWidth && maxWidthInt < math.MaxUint8; maxWidthInt++ {
+		if e.coveredPixel[x+maxWidthInt][y] {
 			break
 		}
 	}
 
-	return width, width
+	width := 1
+	height := 1
+
+	// Go through all forms of rectangles. For d=5 for example: 1x4, 2x3, 3x2, 4x1
+	for d := 2; d < math.MaxUint8; d++ {
+		foundLargerArea := false
+		for w := 1; w < d && w < maxWidthInt; w++ {
+			h := d - w
+
+			if y+int(h) >= e.imageHeight {
+				h = e.imageHeight - y - 1
+			}
+
+			// Only consider larger areas
+			if width*height <= w*h {
+				quality := e.calculateInterpolationQuality(x, y, x+int(w), y+int(h))
+				if quality < qualityThreshold {
+					width = w
+					height = h
+					foundLargerArea = true
+				}
+			}
+		}
+		if !foundLargerArea {
+			break
+		}
+	}
+
+	// TODO HACK: Why do many areas fulfill this?
+	if maxWidthInt-width <= 2 {
+		width = maxWidthInt
+	}
+
+	return uint8(width), uint8(height)
 }
 
-func (e *ChannelEncoder) calculateDifference(x1, y1, x2, y2 int) float64 {
-	interpolatedData := interpolate.Interpolate(uint8(x2-x1), uint8(y2-y1), [4]uint8{
+func (e *ChannelEncoder) calculateInterpolationQuality(x1, y1, x2, y2 int) float64 {
+	width := uint8(x2 - x1)
+	height := uint8(y2 - y1)
+	interpolatedData := interpolate.Interpolate(width, height, [4]uint8{
 		e.channel[x1][y1],
 		e.channel[x2][y1],
 		e.channel[x1][y2],
 		e.channel[x2][y2],
 	})
 
-	// Calculating the sum square difference as one distance measurement between the two image sections
-	// See https://datascience.stackexchange.com/questions/48642/how-to-measure-the-similarity-between-two-images
-
-	squaredSum := 0.0
+	summedDifferences := 0.0
 	for y := y1; y < y2; y++ {
 		for x := x1; x < x2; x++ {
-			squaredSum += math.Pow(float64(e.channel[x][y])-float64(interpolatedData[x-x1][y-y1]), 2)
+			diff := math.Abs(float64(e.channel[x][y]) - float64(interpolatedData[x-x1][y-y1]))
+			summedDifferences += diff
 		}
 	}
+	//maxNumberPixels := 255.0 * 255.0
+	numberPixels := float64(width) * float64(height)
+	normalizedDifferences := summedDifferences
+	normalizedDifferencesPerPixel := normalizedDifferences / numberPixels
 
-	squaredSumOriginal := 0.0
-	squaredSumInterpolated := 0.0
-	for y := y1; y < y2; y++ {
-		for x := x1; x < x2; x++ {
-			squaredSumOriginal += math.Pow(float64(e.channel[x][y]), 2)
-			squaredSumInterpolated += math.Pow(float64(interpolatedData[x-x1][y-y1]), 2)
-		}
-	}
+	max := math.Max(float64(width), float64(height))
+	min := math.Min(float64(width), float64(height))
 
-	normalizedDifference := squaredSum / math.Sqrt(squaredSumOriginal*squaredSumInterpolated)
-	return normalizedDifference
+	// Penalty for large areas as they would otherwise create large artifacts
+	sizeFactor := (max * min) / (255.0 * max)
+
+	// Penalty for non-squared areas (i.e. rectangles with a very long and a very short edge)
+	squareFactor := max / min
+
+	return math.Pow(normalizedDifferencesPerPixel, 2) * math.Pow(squareFactor, 2) * math.Pow(sizeFactor, 2)
 }
