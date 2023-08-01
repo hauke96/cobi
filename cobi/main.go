@@ -1,10 +1,13 @@
 package main
 
 import (
+	"cobi/encoding"
 	"cobi/image"
 	"cobi/png"
+	"encoding/json"
 	"github.com/alecthomas/kong"
 	"github.com/hauke96/sigolo"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -50,6 +53,7 @@ func main() {
 
 	switch mode {
 	case ModeCompress:
+		// Determine correct reader for the input image
 		var reader image.Reader
 		switch inputFileExt {
 		case ".png":
@@ -57,7 +61,13 @@ func main() {
 		default:
 			sigolo.Fatal("Unsupported file extension %s for compression", inputFileExt)
 		}
-		_, err := compress(cli.Input, reader)
+
+		// Compress the image
+		data, err := compress(cli.Input, reader)
+		sigolo.FatalCheck(err)
+
+		// Write the result
+		err = os.WriteFile(cli.Output, data, 0644)
 		sigolo.FatalCheck(err)
 	case ModeDecompress:
 		sigolo.Fatal("Decompression is not implemented yet")
@@ -76,5 +86,10 @@ func compress(filePath string, reader image.Reader) ([]byte, error) {
 		img.Print()
 	}
 
-	return make([]byte, 0), nil
+	encodedAreas, err := encoding.Encode(*img)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(encodedAreas)
 }

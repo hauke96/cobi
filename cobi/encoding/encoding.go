@@ -53,11 +53,11 @@ func findLargestNonEncodedArea(values [][]byte, areas []EncodedArea) *EncodedAre
 	// TODO use real interpolation methods to find encoded areas
 	w := 8
 	if minX+w >= width {
-		w = width - 1 - minX
+		w = width - minX
 	}
 	h := 8
 	if minY+h >= height {
-		h = height - 1 - minY
+		h = height - minY
 	}
 
 	return &EncodedArea{
@@ -67,9 +67,9 @@ func findLargestNonEncodedArea(values [][]byte, areas []EncodedArea) *EncodedAre
 		H: h,
 		Values: [4]byte{
 			values[minX][minY],
-			values[minX+w][minY],
-			values[minX][minY+h],
-			values[minX+w][minY+h],
+			values[minX+w-1][minY],
+			values[minX][minY+h-1],
+			values[minX+w-1][minY+h-1],
 		},
 	}
 }
