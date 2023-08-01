@@ -8,7 +8,7 @@ import (
 // EncodedArea represents
 type EncodedArea struct {
 	X, Y, W, H int
-	Values     [4]byte
+	Values     [4]uint8
 }
 
 func (e *EncodedArea) Contains(x, y int) bool {
@@ -16,7 +16,7 @@ func (e *EncodedArea) Contains(x, y int) bool {
 		e.Y <= y && y <= e.Y+e.H-1
 }
 
-func (e *EncodedArea) GetInterpolatedArea() [][]byte {
+func (e *EncodedArea) GetInterpolatedArea() [][]uint8 {
 	return interpolate.Interpolate(e.W, e.H, e.Values)
 }
 
@@ -30,7 +30,7 @@ func Encode(img image.Image) ([4][]EncodedArea, error) {
 	}, nil
 }
 
-func EncodeChannel(values [][]byte) []EncodedArea {
+func EncodeChannel(values [][]uint8) []EncodedArea {
 	var result []EncodedArea
 
 	for {
@@ -46,7 +46,7 @@ func EncodeChannel(values [][]byte) []EncodedArea {
 
 // findLargestNonEncodedArea finds the next encoded area following the strategy to find areas from the upper-left to the
 // bottom-right of the image.
-func findLargestNonEncodedArea(values [][]byte, areas []EncodedArea) *EncodedArea {
+func findLargestNonEncodedArea(values [][]uint8, areas []EncodedArea) *EncodedArea {
 	width := len(values)
 	height := len(values[0])
 
@@ -70,7 +70,7 @@ func findLargestNonEncodedArea(values [][]byte, areas []EncodedArea) *EncodedAre
 		Y: minY,
 		W: w,
 		H: h,
-		Values: [4]byte{
+		Values: [4]uint8{
 			values[minX][minY],
 			values[minX+w-1][minY],
 			values[minX][minY+h-1],

@@ -70,11 +70,11 @@ func getSizeOfChannel(areas []encoding.EncodedArea) (int, int, error) {
 	return width, height, nil
 }
 
-func interpolateChannel(areas []encoding.EncodedArea, width, height int) [][]byte {
-	result := make([][]byte, width)
+func interpolateChannel(areas []encoding.EncodedArea, width, height int) [][]uint8 {
+	result := make([][]uint8, width)
 
 	for x := 0; x < width; x++ {
-		result[x] = make([]byte, height)
+		result[x] = make([]uint8, height)
 	}
 
 	for _, area := range areas {

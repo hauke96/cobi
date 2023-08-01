@@ -8,10 +8,10 @@ import (
 )
 
 type Image struct {
-	R      [][]byte
-	G      [][]byte
-	B      [][]byte
-	A      [][]byte
+	R      [][]uint8
+	G      [][]uint8
+	B      [][]uint8
+	A      [][]uint8
 	Width  int
 	Height int
 }
@@ -46,10 +46,10 @@ func (img *Image) At(x, y int) color.Color {
 // represents the horizontal x-direction in the image. The second array dimension the vertical y-direction.
 func New(width, height int) *Image {
 	return &Image{
-		R:      make([][]byte, width),
-		G:      make([][]byte, width),
-		B:      make([][]byte, width),
-		A:      make([][]byte, width),
+		R:      make([][]uint8, width),
+		G:      make([][]uint8, width),
+		B:      make([][]uint8, width),
+		A:      make([][]uint8, width),
 		Width:  width,
 		Height: height,
 	}
@@ -60,12 +60,12 @@ func FromGoImage(goImg image.Image) (*Image, error) {
 
 	img := New(w, h)
 
-	// convert data from uint32 into bytes for smaller images
+	// convert data from uint32 into uint8s for smaller images
 	for x := 0; x < w; x++ {
-		img.R[x] = make([]byte, h)
-		img.G[x] = make([]byte, h)
-		img.B[x] = make([]byte, h)
-		img.A[x] = make([]byte, h)
+		img.R[x] = make([]uint8, h)
+		img.G[x] = make([]uint8, h)
+		img.B[x] = make([]uint8, h)
+		img.A[x] = make([]uint8, h)
 
 		for y := 0; y < h; y++ {
 			r, g, b, a := goImg.At(x, y).RGBA()
@@ -78,10 +78,10 @@ func FromGoImage(goImg image.Image) (*Image, error) {
 				return nil, errors.New(fmt.Sprintf("Only 8-bit per channel are allowed but found (R,G,B,A): %d,%d,%d,%d", r, g, b, a))
 			}
 
-			img.R[x][y] = byte(r)
-			img.G[x][y] = byte(g)
-			img.B[x][y] = byte(b)
-			img.A[x][y] = byte(a)
+			img.R[x][y] = uint8(r)
+			img.G[x][y] = uint8(g)
+			img.B[x][y] = uint8(b)
+			img.A[x][y] = uint8(a)
 		}
 	}
 
