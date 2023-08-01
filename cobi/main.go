@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cobi/decoding"
 	"cobi/encoding"
 	"cobi/image"
 	"cobi/png"
@@ -68,7 +67,7 @@ func main() {
 		sigolo.FatalCheck(err)
 
 		// Write the result
-		decodedImage, err := decoding.Decode(encodedAreas)
+		decodedImage, err := encoding.Decode(encodedAreas)
 		sigolo.FatalCheck(err)
 		pngWriter := png.Writer{}
 		err = pngWriter.Write(inputFileName+"_decoded.png", *decodedImage)

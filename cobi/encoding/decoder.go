@@ -1,13 +1,12 @@
-package decoding
+package encoding
 
 import (
-	"cobi/encoding"
 	"cobi/image"
 	"fmt"
 	"github.com/pkg/errors"
 )
 
-func Decode(areas [4][]encoding.EncodedArea) (*image.Image, error) {
+func Decode(areas [4][]EncodedArea) (*image.Image, error) {
 	width, height, err := getAndEnsureWidthHeight(areas)
 	if err != nil {
 		return nil, err
@@ -21,7 +20,7 @@ func Decode(areas [4][]encoding.EncodedArea) (*image.Image, error) {
 	return img, nil
 }
 
-func getAndEnsureWidthHeight(areas [4][]encoding.EncodedArea) (int, int, error) {
+func getAndEnsureWidthHeight(areas [4][]EncodedArea) (int, int, error) {
 	widthR, heightR, err := getSizeOfChannel(areas[0])
 	if err != nil {
 		return -1, -1, err
@@ -49,7 +48,7 @@ func getAndEnsureWidthHeight(areas [4][]encoding.EncodedArea) (int, int, error) 
 	return widthR, heightR, nil
 }
 
-func getSizeOfChannel(areas []encoding.EncodedArea) (int, int, error) {
+func getSizeOfChannel(areas []EncodedArea) (int, int, error) {
 	width := 0
 	height := 0
 
@@ -70,7 +69,7 @@ func getSizeOfChannel(areas []encoding.EncodedArea) (int, int, error) {
 	return width, height, nil
 }
 
-func interpolateChannel(areas []encoding.EncodedArea, width, height int) [][]uint8 {
+func interpolateChannel(areas []EncodedArea, width, height int) [][]uint8 {
 	result := make([][]uint8, width)
 
 	for x := 0; x < width; x++ {
