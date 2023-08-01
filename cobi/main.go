@@ -64,17 +64,18 @@ func main() {
 		}
 
 		// Compress the image
-		data, err := compress(cli.Input, reader)
+		encodedAreas, err := compress(cli.Input, reader)
 		sigolo.FatalCheck(err)
 
 		// Write the result
-		decodedImage, err := decoding.Decode(*data)
+		decodedImage, err := decoding.Decode(encodedAreas)
 		sigolo.FatalCheck(err)
 		pngWriter := png.Writer{}
 		err = pngWriter.Write(inputFileName+"_decoded.png", *decodedImage)
+		err = pngWriter.Write(inputFileName+"_decoded_debug.png", *encoding.GetDebugImage(decodedImage.Width, decodedImage.Height, encodedAreas))
 		sigolo.FatalCheck(err)
 
-		bytes, err := json.Marshal(*data)
+		bytes, err := json.Marshal(encodedAreas)
 		sigolo.FatalCheck(err)
 		err = os.WriteFile(cli.Output, bytes, 0644)
 		sigolo.FatalCheck(err)
@@ -85,10 +86,10 @@ func main() {
 	}
 }
 
-func compress(filePath string, reader image.Reader) (*[4][]encoding.EncodedArea, error) {
+func compress(filePath string, reader image.Reader) ([4][]encoding.EncodedArea, error) {
 	img, err := reader.Read(filePath)
 	if err != nil {
-		return nil, err
+		return [4][]encoding.EncodedArea{}, err
 	}
 
 	//if sigolo.LogLevel == sigolo.LOG_DEBUG {
@@ -97,8 +98,8 @@ func compress(filePath string, reader image.Reader) (*[4][]encoding.EncodedArea,
 
 	encodedAreas, err := encoding.Encode(*img)
 	if err != nil {
-		return nil, err
+		return [4][]encoding.EncodedArea{}, err
 	}
 
-	return &encodedAreas, nil
+	return encodedAreas, nil
 }

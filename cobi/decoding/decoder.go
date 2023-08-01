@@ -62,7 +62,7 @@ func getSizeOfChannel(areas []encoding.EncodedArea) (int, int, error) {
 		}
 	}
 
-	//x, y := encoding.FindMinUncoveredPixel(areas, width, height)
+	//x, y := encoding.findMinUncoveredPixel(areas, width, height)
 	//if x != -1 || y != -1 {
 	//	return -1, -1, errors.New("Encoded areas do not cover the whole image")
 	//}

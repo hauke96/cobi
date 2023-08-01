@@ -4,6 +4,7 @@ import (
 	"cobi/image"
 	"cobi/interpolate"
 	"github.com/hauke96/sigolo"
+	"math"
 )
 
 // EncodedArea represents
@@ -21,42 +22,84 @@ func (e *EncodedArea) GetInterpolatedArea() [][]uint8 {
 	return interpolate.Interpolate(e.W, e.H, e.Values)
 }
 
+func GetDebugImage(width, height int, areas [4][]EncodedArea) *image.Image {
+	img := image.New(width, height)
+
+	for x := 0; x < width; x++ {
+		img.R[x] = make([]uint8, height)
+		img.G[x] = make([]uint8, height)
+		img.B[x] = make([]uint8, height)
+		img.A[x] = make([]uint8, height)
+	}
+
+	for i, _ := range areas {
+		var channel [][]uint8
+		switch i {
+		case 0:
+			channel = img.R
+		case 1:
+			channel = img.G
+		case 2:
+			channel = img.B
+		case 3:
+			channel = img.A
+		}
+
+		for _, area := range areas[i] {
+			channel[area.X][area.Y] = 255
+			channel[area.X+area.W-1][area.Y] = 255
+			channel[area.X][area.Y+area.H-1] = 255
+			channel[area.X+area.W-1][area.Y+area.H-1] = 255
+		}
+	}
+
+	for x, _ := range img.A {
+		for y, _ := range img.A[x] {
+			img.A[x][y] = 255
+		}
+	}
+
+	return img
+}
+
 type ChannelEncoder struct {
 	coveredPixel       [][]bool
 	minUncoveredPixelX int
 	minUncoveredPixelY int
 	imageWidth         int
 	imageHeight        int
+	channel            [][]uint8
 }
 
-func newChannelEncoder(width, height int) *ChannelEncoder {
+func newChannelEncoder(width, height int, channel [][]uint8) *ChannelEncoder {
 	coveredPixel := make([][]bool, width)
 	for x := 0; x < width; x++ {
 		coveredPixel[x] = make([]bool, height)
 	}
 
 	return &ChannelEncoder{
+		coveredPixel:       coveredPixel,
 		minUncoveredPixelX: 0,
 		minUncoveredPixelY: 0,
 		imageWidth:         width,
 		imageHeight:        height,
-		coveredPixel:       coveredPixel,
+		channel:            channel,
 	}
 }
 
 // Encode determines the encoded areas per color channel R (0), G (1), B (2) and A (3).
 func Encode(img image.Image) ([4][]EncodedArea, error) {
 	sigolo.Debug("Encode channel R")
-	channelR := newChannelEncoder(img.Width, img.Height).encodeChannel(img.R)
+	channelR := newChannelEncoder(img.Width, img.Height, img.R).encodeChannel(img.R)
 
 	sigolo.Debug("Encode channel G")
-	channelG := newChannelEncoder(img.Width, img.Height).encodeChannel(img.G)
+	channelG := newChannelEncoder(img.Width, img.Height, img.G).encodeChannel(img.G)
 
 	sigolo.Debug("Encode channel B")
-	channelB := newChannelEncoder(img.Width, img.Height).encodeChannel(img.B)
-	
+	channelB := newChannelEncoder(img.Width, img.Height, img.B).encodeChannel(img.B)
+
 	sigolo.Debug("Encode channel A")
-	channelA := newChannelEncoder(img.Width, img.Height).encodeChannel(img.A)
+	channelA := newChannelEncoder(img.Width, img.Height, img.A).encodeChannel(img.A)
 
 	return [4][]EncodedArea{
 		channelR,
@@ -83,24 +126,12 @@ func (e *ChannelEncoder) encodeChannel(values [][]uint8) []EncodedArea {
 // findLargestNonEncodedArea finds the next encoded area following the strategy to find areas from the upper-left to the
 // bottom-right of the image.
 func (e *ChannelEncoder) findLargestNonEncodedArea(values [][]uint8, areas []EncodedArea) *EncodedArea {
-	imgWidth := len(values)
-	imgHeight := len(values[0])
-
-	//areaX, areaY := e.FindMinUncoveredPixel(imgWidth, imgHeight)
 	areaX, areaY := e.minUncoveredPixelX, e.minUncoveredPixelY
 	if areaX == -1 || areaY == -1 {
 		return nil
 	}
 
-	// TODO use real interpolation methods to find encoded areas
-	areaWidth := 3
-	if areaX+areaWidth >= imgWidth {
-		areaWidth = imgWidth - areaX
-	}
-	areaHeight := 3
-	if areaY+areaHeight >= imgHeight {
-		areaHeight = imgHeight - areaY
-	}
+	areaWidth, areaHeight := e.getAreaSize(areaX, areaY)
 
 	encodedArea := &EncodedArea{
 		X: areaX,
@@ -126,13 +157,13 @@ func (e *ChannelEncoder) addToCoverageMap(encodedArea EncodedArea) {
 			e.coveredPixel[x][y] = true
 		}
 	}
-	e.minUncoveredPixelX, e.minUncoveredPixelY = e.FindMinUncoveredPixel()
+	e.minUncoveredPixelX, e.minUncoveredPixelY = e.findMinUncoveredPixel()
 }
 
-// FindMinUncoveredPixel determines the smallest pixel that is not covered by any area. It is assumed that the encoded
+// findMinUncoveredPixel determines the smallest pixel that is not covered by any area. It is assumed that the encoded
 // areas grow from the upper-left to the bottom-right. This means for example, when (3, 5) is the first non-covered
 // pixel, all pixels in rows 0, 1 or 2 are covered and all pixels of row 3 in columns 0-4 are covered.
-func (e *ChannelEncoder) FindMinUncoveredPixel() (int, int) {
+func (e *ChannelEncoder) findMinUncoveredPixel() (int, int) {
 	for y := e.minUncoveredPixelY; y < e.imageHeight; y++ {
 		for x := 0; x < e.imageWidth; x++ {
 			if !e.coveredPixel[x][y] {
@@ -143,4 +174,65 @@ func (e *ChannelEncoder) FindMinUncoveredPixel() (int, int) {
 
 	// No pixel has been found that's not covered
 	return -1, -1
+}
+
+func (e *ChannelEncoder) getAreaSize(x, y int) (int, int) {
+	maxWidth := 0
+	for _x := x; _x < e.imageWidth && y+maxWidth < e.imageHeight; _x++ {
+		if e.coveredPixel[_x][y] {
+			break
+		}
+		maxWidth++
+	}
+
+	width := 2
+	if maxWidth < width {
+		width = maxWidth
+	}
+
+	// TODO make this configurable
+	differenceThreshold := 0.0005
+
+	for ; width < maxWidth && y+width < e.imageHeight; width++ {
+		// Build a square -> width = height
+		difference := e.calculateDifference(x, y, x+width, y+width)
+		if difference > differenceThreshold {
+			// We passed the point of tolerable quality -> Previous iteration was the last one with an okay difference.
+			width--
+			break
+		}
+	}
+
+	return width, width
+}
+
+func (e *ChannelEncoder) calculateDifference(x1, y1, x2, y2 int) float64 {
+	interpolatedData := interpolate.Interpolate(x2-x1, y2-y1, [4]uint8{
+		e.channel[x1][y1],
+		e.channel[x2][y1],
+		e.channel[x1][y2],
+		e.channel[x2][y2],
+	})
+
+	// Calculating the sum square difference as one distance measurement between the two image sections
+	// See https://datascience.stackexchange.com/questions/48642/how-to-measure-the-similarity-between-two-images
+
+	squaredSum := 0.0
+	for y := y1; y < y2; y++ {
+		for x := x1; x < x2; x++ {
+			squaredSum += math.Pow(float64(e.channel[x][y])-float64(interpolatedData[x-x1][y-y1]), 2)
+		}
+	}
+
+	squaredSumOriginal := 0.0
+	squaredSumInterpolated := 0.0
+	for y := y1; y < y2; y++ {
+		for x := x1; x < x2; x++ {
+			squaredSumOriginal += math.Pow(float64(e.channel[x][y]), 2)
+			squaredSumInterpolated += math.Pow(float64(interpolatedData[x-x1][y-y1]), 2)
+		}
+	}
+
+	normalizedDifference := squaredSum / math.Sqrt(squaredSumOriginal*squaredSumInterpolated)
+	return normalizedDifference
 }
